@@ -1,0 +1,4 @@
+[mcp_servers.laravel-boost]
+command = "wsl.exe"
+args = ["/usr/bin/php8.3", "/var/www/projects/tracker/artisan", "boost:mcp"]
+cwd = "/var/www/projects/tracker"

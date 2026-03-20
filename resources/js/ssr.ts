@@ -4,6 +4,8 @@ import { resolvePageComponent } from 'laravel-vite-plugin/inertia-helpers';
 import type { DefineComponent } from 'vue';
 import { createSSRApp, h } from 'vue';
 import { renderToString } from 'vue/server-renderer';
+import 'vue-sonner/style.css';
+import AppToastProvider from '@/components/AppToastProvider.vue';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -19,7 +21,12 @@ createServer(
                     import.meta.glob<DefineComponent>('./pages/**/*.vue'),
                 ),
             setup: ({ App, props, plugin }) =>
-                createSSRApp({ render: () => h(App, props) }).use(plugin),
+                createSSRApp({
+                    render: () =>
+                        h(AppToastProvider, null, {
+                            default: () => h(App, props),
+                        }),
+                }).use(plugin),
         }),
     { cluster: true },
 );

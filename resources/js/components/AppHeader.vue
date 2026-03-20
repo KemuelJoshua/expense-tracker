@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Menu, Search, Columns2, PhilippinePeso, FileText, Code   } from 'lucide-vue-next';
+import { LayoutGrid, Menu, Search, Columns2, PhilippinePeso, ShieldCheck, Code } from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
@@ -37,6 +37,7 @@ import { getInitials } from '@/composables/useInitials';
 import { toUrl } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem, NavItem } from '@/types';
+import type { Auth } from '@/types/auth';
 
 type Props = {
     breadcrumbs?: BreadcrumbItem[];
@@ -47,40 +48,52 @@ const props = withDefaults(defineProps<Props>(), {
 });
 
 const page = usePage();
-const auth = computed(() => page.props.auth);
+const auth = computed<Auth>(() => page.props.auth as Auth);
 const { isCurrentUrl, whenCurrentUrl } = useCurrentUrl();
 
 const activeItemStyles =
     'text-neutral-900 dark:bg-neutral-800 dark:text-neutral-100';
 
-const mainNavItems: NavItem[] = [
+const canAccess = (permission: string): boolean => {
+    return auth.value.user?.permissions.includes(permission) ?? false;
+};
+
+const mainNavItems: (NavItem & { permission: string })[] = [
     {
         title: 'Dashboard',
         href: dashboard(),
         icon: LayoutGrid,
+        permission: 'dashboard.view',
     },
     {
         title: 'Cutoff',
         href: '/cutoff',
         icon: Columns2,
+        permission: 'cutoff.view',
     },
     {
         title: 'Expenses',
         href: '/expenses',
         icon: PhilippinePeso,
+        permission: 'expenses.view',
     },
-    // {
-    //     title: 'Report',
-    //     href: '/report',
-    //     icon: FileText,
-    // },
+    {
+        title: 'Roles',
+        href: '/roles',
+        icon: ShieldCheck,
+        permission: 'roles.view',
+    },
 ];
+
+const visibleMainNavItems = computed(() => {
+    return mainNavItems.filter((item) => canAccess(item.permission));
+});
 
 const rightNavItems: NavItem[] = [
     {
         title: 'My Portfolio',
         href: 'https://kemueljoshuamariano.com',
-        icon: Code  ,
+        icon: Code,
     },
 ];
 </script>
@@ -115,7 +128,7 @@ const rightNavItems: NavItem[] = [
                             >
                                 <nav class="-mx-3 space-y-1">
                                     <Link
-                                        v-for="item in mainNavItems"
+                                        v-for="item in visibleMainNavItems"
                                         :key="item.title"
                                         :href="item.href"
                                         class="flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent"
@@ -167,7 +180,7 @@ const rightNavItems: NavItem[] = [
                             class="flex h-full items-stretch space-x-2"
                         >
                             <NavigationMenuItem
-                                v-for="(item, index) in mainNavItems"
+                                v-for="(item, index) in visibleMainNavItems"
                                 :key="index"
                                 class="relative flex h-full items-center"
                             >

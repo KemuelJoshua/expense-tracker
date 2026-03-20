@@ -16,6 +16,8 @@ class ExpensesController extends Controller
 {
     public function index(Request $request): Response
     {
+        $this->authorizePermission('expenses.view');
+
         $search = trim((string) $request->input('search', ''));
 
         $expenses = Expenses::query()
@@ -42,6 +44,8 @@ class ExpensesController extends Controller
 
     public function store(ExpenseRequest $request): RedirectResponse
     {
+        $this->authorizePermission('expenses.create');
+
         $validated = $request->validated();
 
         if ($request->hasFile('attachment')) {
@@ -60,6 +64,8 @@ class ExpensesController extends Controller
 
     public function update(ExpenseRequest $request, Expenses $expense): RedirectResponse
     {
+        $this->authorizePermission('expenses.update');
+
         $validated = $request->validated();
 
         if ($request->hasFile('attachment')) {
@@ -78,11 +84,15 @@ class ExpensesController extends Controller
 
     public function show(Expenses $expense): JsonResponse
     {
+        $this->authorizePermission('expenses.view');
+
         return response()->json($expense);
     }
 
     public function edit(Expenses $expense): JsonResponse
     {
+        $this->authorizePermission('expenses.update');
+
         return response()->json($expense);
     }
 }

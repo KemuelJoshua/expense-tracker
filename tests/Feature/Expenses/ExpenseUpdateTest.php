@@ -4,6 +4,7 @@ namespace Tests\Feature\Expenses;
 
 use App\Models\Expenses;
 use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -15,7 +16,9 @@ class ExpenseUpdateTest extends TestCase
 
     public function test_an_authenticated_user_can_update_an_expense(): void
     {
-        $user = User::factory()->create();
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
 
         $expense = Expenses::factory()->create([
             'name' => 'Office Internet',
@@ -71,7 +74,9 @@ class ExpenseUpdateTest extends TestCase
     {
         Storage::fake('public');
 
-        $user = User::factory()->create();
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
 
         $expense = Expenses::factory()->create([
             'attachment' => 'expenses/original-receipt.pdf',

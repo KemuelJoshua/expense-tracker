@@ -4,6 +4,7 @@ namespace Tests\Feature\Expenses;
 
 use App\Models\Expenses;
 use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -12,12 +13,11 @@ class ExpenseIndexTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * @return void
-     */
     public function test_expenses_index_returns_paginated_expenses(): void
     {
-        $user = User::factory()->create();
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
 
         Expenses::factory()->count(3)->create();
 
@@ -33,7 +33,9 @@ class ExpenseIndexTest extends TestCase
 
     public function test_expenses_index_filters_expenses_using_the_search_query(): void
     {
-        $user = User::factory()->create();
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
 
         Expenses::factory()->create([
             'name' => 'Office Internet',

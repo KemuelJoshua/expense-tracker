@@ -4,6 +4,7 @@ namespace Tests\Feature\Expenses;
 
 use App\Models\Expenses;
 use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -13,7 +14,9 @@ class ExpenseStoreTest extends TestCase
 
     public function test_an_authenticated_user_can_create_an_expense_with_pay_in(): void
     {
-        $user = User::factory()->create();
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)
             ->post(route('expenses.store'), [
@@ -42,7 +45,9 @@ class ExpenseStoreTest extends TestCase
 
     public function test_pay_in_is_required_when_creating_an_expense(): void
     {
-        $user = User::factory()->create();
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
 
         $this->actingAs($user)
             ->from(route('expenses.index'))

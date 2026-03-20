@@ -82,11 +82,6 @@ const rightNavItems: NavItem[] = [
         href: 'https://kemueljoshuamariano.com',
         icon: Code  ,
     },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
-    },
 ];
 </script>
 

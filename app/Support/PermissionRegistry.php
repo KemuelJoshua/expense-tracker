@@ -49,6 +49,13 @@ class PermissionRegistry
                     'roles.delete' => 'Delete roles',
                 ],
             ],
+            'approvals' => [
+                'label' => 'Approvals',
+                'permissions' => [
+                    'approvals.view' => 'View user approvals',
+                    'approvals.update' => 'Approve or reject end users',
+                ],
+            ],
         ];
     }
 

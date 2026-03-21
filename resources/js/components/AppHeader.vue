@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { LayoutGrid, Menu, Search, Columns2, PhilippinePeso, ShieldCheck, Code } from 'lucide-vue-next';
+import {
+    LayoutGrid,
+    Menu,
+    Search,
+    Columns2,
+    PhilippinePeso,
+    ShieldCheck,
+    Code,
+    UserCheck,
+} from 'lucide-vue-next';
 import { computed } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import AppLogoIcon from '@/components/AppLogoIcon.vue';
@@ -88,6 +97,12 @@ const mainNavItems: (NavItem & { permission: string })[] = [
         href: '/roles',
         icon: ShieldCheck,
         permission: 'roles.view',
+    },
+    {
+        title: 'Approvals',
+        href: '/approvals',
+        icon: UserCheck,
+        permission: 'approvals.view',
     },
 ];
 

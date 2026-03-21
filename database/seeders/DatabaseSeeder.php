@@ -26,5 +26,9 @@ class DatabaseSeeder extends Seeder
         ]);
 
         $user->assignRole('Admin');
+
+        $this->call([
+            ExpenseAndSavingsSeeder::class,
+        ]);
     }
 }

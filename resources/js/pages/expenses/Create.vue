@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Plus } from 'lucide-vue-next';
+import { computed } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -47,6 +48,11 @@ const handleSubmit = () => {
     emit('submit');
 };
 
+const formModel = computed({
+    get: () => props.form,
+    set: () => {},
+});
+
 </script>
 
 <template>
@@ -80,7 +86,7 @@ const handleSubmit = () => {
                 class="flex flex-1 flex-col overflow-hidden"
             >
                 <div class="flex-1 overflow-y-auto px-6 py-5">
-                    <ExpenseForm :form="props.form" />
+                    <ExpenseForm v-model:form="formModel" />
                 </div>
 
                 <DialogFooter class="border-t px-6 py-4 sm:justify-between">

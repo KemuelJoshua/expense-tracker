@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
-import { Search, X } from 'lucide-vue-next';
+import { Eye, EyeOff, Search } from 'lucide-vue-next';
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
+import EmptyState from '@/components/EmptyState.vue';
 import TableIcon from '@/components/TableIcon.vue';
+import TableSkeleton from '@/components/TableSkeleton.vue';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { formatAmount, formatDate } from '@/lib/formatters';
-
 import {
     Table,
     TableBody,
@@ -14,9 +15,8 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { formatAmount, formatDate } from '@/lib/formatters';
 import { index as expensesIndex } from '@/routes/expenses';
-import EmptyState from '@/components/EmptyState.vue';
-import TableSkeleton from '@/components/TableSkeleton.vue';
 
 import type { Expense, Filters, Summary } from '../types/expense';
 
@@ -43,6 +43,7 @@ onBeforeUnmount(() => {
 });
 
 const isLoading = ref(false);
+const areAmountsVisible = ref(false);
 
 const formatType = (type: string): string => {
     return type.charAt(0).toUpperCase() + type.slice(1);
@@ -91,6 +92,18 @@ const scheduleSearch = (): void => {
         applySearch(search.value);
     }, 300);
 };
+
+const displayAmount = (value: number | string | null | undefined): string => {
+    if (value === null || value === undefined || value === '') {
+        return '—';
+    }
+
+    if (!areAmountsVisible.value) {
+        return '₱••••••';
+    }
+
+    return `₱${formatAmount(value)}`;
+};
 </script>
 
 <template>
@@ -112,6 +125,15 @@ const scheduleSearch = (): void => {
 
             <!-- Buttons -->
             <div class="flex items-center gap-2">
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    @click="areAmountsVisible = !areAmountsVisible"
+                >
+                    <component :is="areAmountsVisible ? EyeOff : Eye" class="size-4" />
+                    {{ areAmountsVisible ? 'Hide amounts' : 'Show amounts' }}
+                </Button>
                 <slot name="buttons"></slot>
             </div>
         </div>
@@ -219,15 +241,11 @@ const scheduleSearch = (): void => {
 
                         <TableCell class="text-right align-top">
                             <div class="space-y-1">
-                                <p
-                                    class="text-sm font-semibold text-foreground"
-                                >
-                                    ₱{{ formatAmount(expense.total_amount) }}
+                                <p class="text-sm font-semibold text-foreground">
+                                    {{ displayAmount(expense.total_amount) }}
                                 </p>
                                 <p class="text-xs text-muted-foreground">
-                                    Paid ₱{{
-                                        formatAmount(expense.paid_amount)
-                                    }}
+                                    Paid {{ displayAmount(expense.paid_amount) }}
                                 </p>
                             </div>
                         </TableCell>

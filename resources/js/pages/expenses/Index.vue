@@ -1,11 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue';
-import axios from 'axios';
 import { Head } from '@inertiajs/vue3';
-
-import Pagination from '@/components/Pagination.vue';
-import AppLayout from '@/layouts/AppLayout.vue';
-import type { BreadcrumbItem } from '@/types';
+import axios from 'axios';
+import { ref } from 'vue';
 
 import {
     edit,
@@ -13,13 +9,16 @@ import {
     store,
     update,
 } from '@/actions/App/Http/Controllers/ExpensesController';
+import Pagination from '@/components/Pagination.vue';
+import AppLayout from '@/layouts/AppLayout.vue';
+import type { BreadcrumbItem } from '@/types';
 
 import { useExpenseForm } from './composables/useExpenseForm';
 
 import Create from './Create.vue';
-import Show from './Show.vue';
-import ExpenseTable from './partials/ExpenseTable.vue';
 import ExpenseActionsDropdown from './partials/ExpenseActionsDropdown.vue';
+import ExpenseTable from './partials/ExpenseTable.vue';
+import Show from './Show.vue';
 
 import type { Expense, Filters, PaginatedExpenses } from './types/expense';
 
@@ -71,6 +70,7 @@ const handleEdit = async (id: number) => {
     form.date_end = data.date_end ?? '';
     form.payment_due = data.payment_due ?? '';
     form.pay_in = data.pay_in ?? 'first';
+    form.payment_mode = data.payment_mode ?? '';
     form.is_recurring = Number(data.is_recurring ?? 0);
     form.recurring_cycle = data.recurring_cycle ?? '';
     form.description = data.description ?? '';

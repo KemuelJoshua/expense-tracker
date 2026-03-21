@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { Eye, EyeOff } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -11,6 +12,7 @@ import {
     DialogClose,
 } from '@/components/ui/dialog';
 import { Separator } from '@/components/ui/separator';
+import { formatPaymentDueDay } from '@/lib/formatters';
 import type { Expense } from './types/expense';
 
 const props = defineProps<{
@@ -23,10 +25,13 @@ const emit = defineEmits<{
     (e: 'close'): void;
 }>();
 
+const areAmountsVisible = ref(false);
+
 const handleOpenChange = (value: boolean) => {
     emit('update:open', value);
 
     if (!value) {
+        areAmountsVisible.value = false;
         emit('close');
     }
 };
@@ -63,12 +68,26 @@ const formatCurrency = (
 const recurringLabel = computed(() => {
     return props.expense?.is_recurring ? 'Yes' : 'No';
 });
+
+const displayAmount = (
+    value: number | string | null | undefined,
+): number | string => {
+    if (areAmountsVisible.value) {
+        return formatCurrency(value);
+    }
+
+    if (value === null || value === undefined || value === '') {
+        return '—';
+    }
+
+    return '₱••••••';
+};
 </script>
 
 <template>
     <Dialog :open="props.open" @update:open="handleOpenChange">
         <DialogContent
-            class="flex max-h-[90vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-5xl"
+            class="flex max-h-[90vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl"
         >
             <DialogHeader class="border-b px-6 py-5">
                 <DialogTitle class="text-xl font-semibold tracking-tight">
@@ -85,12 +104,38 @@ const recurringLabel = computed(() => {
                     <div class="space-y-8">
                         <!-- Summary -->
                         <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
+                            <div class="rounded-lg border bg-muted/30 px-4 py-3 sm:col-span-3">
+                                <div class="flex items-center justify-between gap-4">
+                                    <div>
+                                        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                                            Amount Privacy
+                                        </p>
+                                        <p class="mt-1 text-sm text-muted-foreground">
+                                            Hide or reveal sensitive expense amounts.
+                                        </p>
+                                    </div>
+
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        @click="areAmountsVisible = !areAmountsVisible"
+                                    >
+                                        <component
+                                            :is="areAmountsVisible ? EyeOff : Eye"
+                                            class="size-4"
+                                        />
+                                        {{ areAmountsVisible ? 'Hide amounts' : 'Show amounts' }}
+                                    </Button>
+                                </div>
+                            </div>
+
                             <div class="rounded-lg border bg-muted/30 px-4 py-3">
                                 <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                                     Total Amount
                                 </p>
                                 <p class="mt-1 text-lg font-semibold text-foreground">
-                                    {{ formatCurrency(props.expense?.total_amount) }}
+                                    {{ displayAmount(props.expense?.total_amount) }}
                                 </p>
                             </div>
 
@@ -99,7 +144,7 @@ const recurringLabel = computed(() => {
                                     Paid Amount
                                 </p>
                                 <p class="mt-1 text-lg font-semibold text-foreground">
-                                    {{ formatCurrency(props.expense?.paid_amount) }}
+                                    {{ displayAmount(props.expense?.paid_amount) }}
                                 </p>
                             </div>
 
@@ -192,7 +237,7 @@ const recurringLabel = computed(() => {
                                 <div class="space-y-1">
                                     <p class="text-sm text-muted-foreground">Payment Due</p>
                                     <p class="font-medium text-foreground">
-                                        {{ displayValue(props.expense?.payment_due) }}
+                                        {{ formatPaymentDueDay(props.expense?.payment_due) }}
                                     </p>
                                 </div>
 

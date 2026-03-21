@@ -21,6 +21,7 @@ class ExpenseUpdateTest extends TestCase
         $user = User::factory()->admin()->create();
 
         $expense = Expenses::factory()->create([
+            'created_by' => $user->id,
             'name' => 'Office Internet',
             'total_amount' => 1250,
             'paid_amount' => 500,
@@ -29,7 +30,7 @@ class ExpenseUpdateTest extends TestCase
             'reference_no' => 'INV-1001',
             'date_start' => '2026-03-01',
             'date_end' => '2026-03-31',
-            'payment_due' => '2026-03-15',
+            'payment_due' => 15,
             'pay_in' => 'first',
             'is_recurring' => true,
             'recurring_cycle' => 'monthly',
@@ -46,8 +47,9 @@ class ExpenseUpdateTest extends TestCase
                 'reference_no' => 'INV-2002',
                 'date_start' => '2026-03-05',
                 'date_end' => '2026-04-05',
-                'payment_due' => '2026-03-20',
+                'payment_due' => 20,
                 'pay_in' => 'second',
+                'payment_mode' => 'fixed_monthly',
                 'is_recurring' => true,
                 'recurring_cycle' => 'yearly',
                 'description' => 'Updated description',
@@ -62,11 +64,12 @@ class ExpenseUpdateTest extends TestCase
         $this->assertSame('Operations', $expense->category);
         $this->assertSame('INV-2002', $expense->reference_no);
         $this->assertSame('2026-03-05', $expense->date_start);
-        $this->assertSame('2026-04-05', $expense->date_end);
-        $this->assertSame('2026-03-20', $expense->payment_due);
+        $this->assertNull($expense->date_end);
+        $this->assertSame(20, $expense->payment_due);
         $this->assertSame('second', $expense->pay_in);
+        $this->assertSame('fixed_monthly', $expense->payment_mode);
         $this->assertTrue((bool) $expense->is_recurring);
-        $this->assertSame('yearly', $expense->recurring_cycle);
+        $this->assertSame('monthly', $expense->recurring_cycle);
         $this->assertSame('Updated description', $expense->description);
     }
 
@@ -79,6 +82,7 @@ class ExpenseUpdateTest extends TestCase
         $user = User::factory()->admin()->create();
 
         $expense = Expenses::factory()->create([
+            'created_by' => $user->id,
             'attachment' => 'expenses/original-receipt.pdf',
         ]);
 
@@ -95,8 +99,9 @@ class ExpenseUpdateTest extends TestCase
                 'reference_no' => 'INV-2002',
                 'date_start' => '2026-03-05',
                 'date_end' => '2026-04-05',
-                'payment_due' => '2026-03-20',
+                'payment_due' => 20,
                 'pay_in' => 'second',
+                'payment_mode' => 'fixed_monthly',
                 'is_recurring' => true,
                 'recurring_cycle' => 'yearly',
                 'description' => 'Updated description',
@@ -108,7 +113,69 @@ class ExpenseUpdateTest extends TestCase
 
         $this->assertSame('Updated Internet', $expense->name);
         $this->assertSame('second', $expense->pay_in);
+        $this->assertSame('fixed_monthly', $expense->payment_mode);
         $this->assertNotNull($expense->attachment);
         Storage::disk('public')->assertExists($expense->attachment);
+    }
+
+    public function test_an_authenticated_user_can_delete_an_expense_and_its_attachment(): void
+    {
+        Storage::fake('public');
+
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
+
+        Storage::disk('public')->put('expenses/receipt.pdf', 'dummy file');
+
+        $expense = Expenses::factory()->create([
+            'created_by' => $user->id,
+            'attachment' => 'expenses/receipt.pdf',
+        ]);
+
+        $this->actingAs($user)
+            ->delete(route('expenses.destroy', $expense))
+            ->assertRedirect(route('expenses.index'));
+
+        $this->assertDatabaseMissing('expenses', [
+            'id' => $expense->id,
+        ]);
+        Storage::disk('public')->assertMissing('expenses/receipt.pdf');
+    }
+
+    public function test_user_cannot_view_or_modify_another_users_expense(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
+        $otherUser = User::factory()->admin()->create();
+
+        $expense = Expenses::factory()->create([
+            'created_by' => $otherUser->id,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('expenses.show', $expense))
+            ->assertNotFound();
+
+        $this->actingAs($user)
+            ->get(route('expenses.edit', $expense))
+            ->assertNotFound();
+
+        $this->actingAs($user)
+            ->put(route('expenses.update', $expense), [
+                'name' => 'Blocked Update',
+                'total_amount' => 1000,
+                'paid_amount' => 0,
+                'type' => 'others',
+                'date_start' => '2026-03-01',
+                'payment_due' => 10,
+                'pay_in' => 'first',
+            ])
+            ->assertNotFound();
+
+        $this->actingAs($user)
+            ->delete(route('expenses.destroy', $expense))
+            ->assertNotFound();
     }
 }

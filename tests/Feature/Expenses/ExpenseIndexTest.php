@@ -19,7 +19,9 @@ class ExpenseIndexTest extends TestCase
 
         $user = User::factory()->admin()->create();
 
-        Expenses::factory()->count(3)->create();
+        Expenses::factory()->count(3)->create([
+            'created_by' => $user->id,
+        ]);
 
         $this->actingAs($user)
             ->get(route('expenses.index'))
@@ -38,6 +40,7 @@ class ExpenseIndexTest extends TestCase
         $user = User::factory()->admin()->create();
 
         Expenses::factory()->create([
+            'created_by' => $user->id,
             'name' => 'Office Internet',
             'type' => 'utilities',
             'category' => 'Connectivity',
@@ -45,6 +48,7 @@ class ExpenseIndexTest extends TestCase
         ]);
 
         Expenses::factory()->create([
+            'created_by' => $user->id,
             'name' => 'Team Lunch',
             'type' => 'others',
             'category' => 'Meals',
@@ -59,6 +63,32 @@ class ExpenseIndexTest extends TestCase
                 ->where('filters.search', 'internet')
                 ->has('expenses.data', 1)
                 ->where('expenses.data.0.name', 'Office Internet'),
+            );
+    }
+
+    public function test_expenses_index_only_returns_the_authenticated_users_expenses(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
+        $otherUser = User::factory()->admin()->create();
+
+        Expenses::factory()->create([
+            'created_by' => $user->id,
+            'name' => 'My Expense',
+        ]);
+
+        Expenses::factory()->create([
+            'created_by' => $otherUser->id,
+            'name' => 'Other Expense',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('expenses.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('expenses.data', 1)
+                ->where('expenses.data.0.name', 'My Expense'),
             );
     }
 }

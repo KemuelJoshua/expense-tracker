@@ -18,9 +18,11 @@ class AccountsController extends Controller
     {
         $this->authorizePermission('accounts.view');
 
+        $userId = Auth::id();
         $search = trim((string) $request->input('search', ''));
 
         $accounts = Accounts::query()
+            ->where('user_id', $userId)
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $query->where(function (Builder $expenseQuery) use ($search): void {
                     $expenseQuery
@@ -74,6 +76,7 @@ class AccountsController extends Controller
     public function show(Accounts $account): JsonResponse
     {
         $this->authorizePermission('accounts.view');
+        abort_unless($account->user_id === Auth::id(), 404);
 
         return response()->json($account);
     }
@@ -81,6 +84,7 @@ class AccountsController extends Controller
     public function edit(Accounts $account): JsonResponse
     {
         $this->authorizePermission('accounts.update');
+        abort_unless($account->user_id === Auth::id(), 404);
 
         return response()->json($account);
     }
@@ -88,6 +92,7 @@ class AccountsController extends Controller
     public function update(AccountRequest $request, Accounts $account): RedirectResponse
     {
         $this->authorizePermission('accounts.update');
+        abort_unless($account->user_id === Auth::id(), 404);
 
         $validated = $request->validated();
 
@@ -108,6 +113,7 @@ class AccountsController extends Controller
     public function destroy(Accounts $account): RedirectResponse
     {
         $this->authorizePermission('accounts.delete');
+        abort_unless($account->user_id === Auth::id(), 404);
 
         $account->delete();
 

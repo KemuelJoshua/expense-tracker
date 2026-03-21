@@ -8,8 +8,9 @@ export interface Expense {
     reference_no: string | null;
     date_start: string;
     date_end: string | null;
-    payment_due: string | null;
+    payment_due: number | string | null;
     pay_in: string;
+    payment_mode: string | null;
     is_recurring: boolean | number;
     recurring_cycle: string | null;
     description: string | null;
@@ -28,8 +29,9 @@ export interface ExpenseFormData {
     reference_no: string;
     date_start: string;
     date_end: string;
-    payment_due: string;
+    payment_due: number | string;
     pay_in: string;
+    payment_mode: string;
     is_recurring: number;
     recurring_cycle: string;
     description: string;

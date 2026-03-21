@@ -1,14 +1,22 @@
 <script setup lang="ts">
-import { Head } from '@inertiajs/vue3';
+import { router, Head } from '@inertiajs/vue3';
+import { Button } from '@/components/ui/button';
 import AppLayout from '@/layouts/AppLayout.vue';
 import type { BreadcrumbItem } from '@/types';
+import { useFilterForm } from './composables/useFilterForm';
 import Filter from './partials/Filter.vue';
 import Sheet from './partials/Sheet.vue';
-import { useFilterForm } from './composables/useFilterForm';
+import type { CutoffFilters, CutoffGroup, CutoffSummary } from './types/cutoff';
 
-import { Button } from '@/components/ui/button';
+const props = defineProps<{
+    cutoffs: Record<'first' | 'second', CutoffGroup>;
+    filters: CutoffFilters;
+    summary: CutoffSummary;
+}>();
 
 const { form } = useFilterForm();
+
+form.date = props.filters.month;
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -17,9 +25,26 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const fetchCutoff = () => {
-    console.log(form.date);
-    console.log(form);
+const fetchCutoff = (): void => {
+    router.get(
+        '/cutoff',
+        {
+            month: form.date,
+        },
+        {
+            only: ['cutoffs', 'filters', 'summary'],
+            preserveScroll: true,
+            preserveState: true,
+            replace: true,
+        },
+    );
+};
+
+const formatCurrency = (value: number | string): string => {
+    return Number(value).toLocaleString('en-PH', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
 };
 </script>
 
@@ -28,40 +53,56 @@ const fetchCutoff = () => {
 
     <AppLayout :breadcrumbs="breadcrumbs">
         <div class="w-full px-4 py-2">
-            
             <div class="space-y-5">
-                <!-- Filter -->
                 <div class="py-5">
                     <div class="mb-3">
                         <h2 class="text-sm font-medium text-foreground">
                             Filter
                         </h2>
                         <p class="text-xs text-muted-foreground sm:text-sm">
-                            Choose a date to load the cutoff details.
+                            Choose a month to load the cutoff summary and grouped expenses.
                         </p>
                     </div>
 
-                    <Filter v-model:date="form.date" >
+                    <Filter v-model:date="form.date">
                         <Button class="w-full sm:w-auto" @click="fetchCutoff">
-                            Enter Actual Salary
+                            Load Cutoff
                         </Button>
                     </Filter>
                 </div>
 
-                <!-- Content -->
-                <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
-                    <Sheet/>
-
-                    <div class="flex h-32 items-center justify-center rounded-xl border border-dashed bg-muted/20 p-4">
-                        <div class="text-center">
-                            <p class="text-sm font-medium text-foreground">
-                                Content 2
-                            </p>
-                            <p class="text-xs text-muted-foreground sm:text-sm">
-                                Your second cutoff panel goes here.
-                            </p>
-                        </div>
+                <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div class="rounded-xl border bg-background p-4 shadow-sm">
+                        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            Selected Month
+                        </p>
+                        <p class="mt-2 text-lg font-semibold text-foreground">
+                            {{ summary.month }}
+                        </p>
                     </div>
+
+                    <div class="rounded-xl border bg-background p-4 shadow-sm">
+                        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            Total Expenses
+                        </p>
+                        <p class="mt-2 text-lg font-semibold text-foreground">
+                            {{ summary.count }}
+                        </p>
+                    </div>
+
+                    <div class="rounded-xl border bg-background p-4 shadow-sm">
+                        <p class="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                            Total Amount
+                        </p>
+                        <p class="mt-2 text-lg font-semibold text-foreground">
+                            ₱{{ formatCurrency(summary.total_amount) }}
+                        </p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4 xl:grid-cols-2">
+                    <Sheet :cutoff="cutoffs.first" />
+                    <Sheet :cutoff="cutoffs.second" />
                 </div>
             </div>
         </div>

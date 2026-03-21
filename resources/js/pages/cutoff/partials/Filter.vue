@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Input } from '@/components/ui/input';
 import { Calendar } from 'lucide-vue-next';
+import { Input } from '@/components/ui/input';
 
 const props = defineProps<{
     date: string;
@@ -27,12 +27,11 @@ const emit = defineEmits<{
                         type="month"
                         :model-value="props.date"
                         @update:model-value="emit('update:date', $event)"
-                        class="h-9 pl-10 text-sm max-w-xl"
+                        class="h-9 max-w-xl pl-10 text-sm"
                     />
-                    <slot/>
+                    <slot />
                 </div>
             </div>
         </div>
-        
     </div>
 </template>

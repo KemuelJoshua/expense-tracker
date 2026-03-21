@@ -7,6 +7,7 @@ import {
     update,
     destroy,
 } from '@/actions/App/Http/Controllers/RolesController';
+import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue';
 import {
     Accordion,
     AccordionContent,
@@ -78,6 +79,8 @@ const canCreateRoles = computed(() => userPermissions.value.includes('roles.crea
 const canUpdateRoles = computed(() => userPermissions.value.includes('roles.update'));
 const canDeleteRoles = computed(() => userPermissions.value.includes('roles.delete'));
 const isSuperAdmin = computed(() => userRoles.value.includes('SuperAdmin'));
+const deleteDialogOpen = ref(false);
+const rolePendingDelete = ref<RoleItem | null>(null);
 
 const hasPermission = (roleId: number, permission: string): boolean => {
     return selectedPermissions[roleId]?.includes(permission) ?? false;
@@ -140,15 +143,25 @@ const saveRolePermissions = (role: RoleItem): void => {
 };
 
 const deleteRole = (role: RoleItem): void => {
-    if (
-        role.is_protected ||
-        !window.confirm(`Delete the ${role.name} role?`)
-    ) {
+    if (role.is_protected) {
         return;
     }
 
-    router.delete(destroy.url(role.id), {
+    rolePendingDelete.value = role;
+    deleteDialogOpen.value = true;
+};
+
+const confirmDeleteRole = (): void => {
+    if (rolePendingDelete.value === null) {
+        return;
+    }
+
+    router.delete(destroy.url(rolePendingDelete.value.id), {
         preserveScroll: true,
+        onFinish: () => {
+            deleteDialogOpen.value = false;
+            rolePendingDelete.value = null;
+        },
     });
 };
 
@@ -163,6 +176,14 @@ const rolePermissionCount = (roleId: number): number => {
     <Head title="Tracker | Roles" />
 
     <AppLayout :breadcrumbs="breadcrumbs">
+        <ConfirmDeleteDialog
+            v-model:open="deleteDialogOpen"
+            :title="`Delete ${rolePendingDelete?.name ?? 'role'}?`"
+            description="This will permanently remove the selected role."
+            confirm-label="Delete role"
+            @confirm="confirmDeleteRole"
+        />
+
         <div class="p-4 md:p-6">
             <section class="overflow-hidden rounded-xl border bg-background">
                 <div class="border-b px-4 py-4 md:px-5">

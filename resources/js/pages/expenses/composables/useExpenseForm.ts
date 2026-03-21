@@ -13,6 +13,7 @@ export function useExpenseForm() {
         date_end: '',
         payment_due: '',
         pay_in: '',
+        payment_mode: '',
         is_recurring: 0,
         recurring_cycle: '',
         description: '',

@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import { router } from '@inertiajs/vue3';
 import { MoreHorizontal } from 'lucide-vue-next';
+import { ref } from 'vue';
+import { destroy } from '@/actions/App/Http/Controllers/ExpensesController';
+import ConfirmDeleteDialog from '@/components/ConfirmDeleteDialog.vue';
 import { Button } from '@/components/ui/button';
 import {
     DropdownMenu,
@@ -21,6 +24,8 @@ const emit = defineEmits<{
     (e: 'view', id: number): void;
 }>();
 
+const deleteDialogOpen = ref(false);
+
 const viewExpense = () => {
     emit('view', props.expense.id);
 };
@@ -29,18 +34,25 @@ const editExpense = () => {
     emit('edit', props.expense.id);
 };
 
-const deleteExpense = () => {
-    if (!window.confirm('Are you sure you want to delete this expense?')) {
-        return;
-    }
-
-    router.delete(`/expenses/${props.expense.id}`, {
+const confirmDeleteExpense = (): void => {
+    router.delete(destroy.url(props.expense.id), {
         preserveScroll: true,
+        onFinish: () => {
+            deleteDialogOpen.value = false;
+        },
     });
 };
 </script>
 
 <template>
+    <ConfirmDeleteDialog
+        v-model:open="deleteDialogOpen"
+        title="Delete expense?"
+        description="This will permanently remove the expense record."
+        confirm-label="Delete expense"
+        @confirm="confirmDeleteExpense"
+    />
+
     <DropdownMenu>
         <DropdownMenuTrigger as-child>
             <Button variant="ghost" size="icon" class="h-8 w-8">
@@ -58,7 +70,7 @@ const deleteExpense = () => {
 
             <DropdownMenuItem
                 class="text-destructive focus:text-destructive"
-                @click="deleteExpense"
+                @click="deleteDialogOpen = true"
             >
                 Delete
             </DropdownMenuItem>

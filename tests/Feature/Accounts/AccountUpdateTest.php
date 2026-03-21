@@ -101,7 +101,9 @@ class AccountUpdateTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
 
         $user = User::factory()->admin()->create();
-        $account = Accounts::factory()->create();
+        $account = Accounts::factory()->create([
+            'user_id' => $user->id,
+        ]);
 
         $this->actingAs($user)
             ->get(route('accounts.show', $account))
@@ -117,7 +119,9 @@ class AccountUpdateTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
 
         $user = User::factory()->admin()->create();
-        $account = Accounts::factory()->create();
+        $account = Accounts::factory()->create([
+            'user_id' => $user->id,
+        ]);
 
         $this->actingAs($user)
             ->get(route('accounts.edit', $account))
@@ -133,7 +137,9 @@ class AccountUpdateTest extends TestCase
         $this->seed(RolesAndPermissionsSeeder::class);
 
         $user = User::factory()->admin()->create();
-        $account = Accounts::factory()->create();
+        $account = Accounts::factory()->create([
+            'user_id' => $user->id,
+        ]);
 
         $this->actingAs($user)
             ->delete(route('accounts.destroy', $account))
@@ -142,5 +148,41 @@ class AccountUpdateTest extends TestCase
         $this->assertSoftDeleted('accounts', [
             'id' => $account->id,
         ]);
+    }
+
+    public function test_user_cannot_view_or_modify_another_users_account(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
+        $otherUser = User::factory()->admin()->create();
+
+        $account = Accounts::factory()->create([
+            'user_id' => $otherUser->id,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('accounts.show', $account))
+            ->assertNotFound();
+
+        $this->actingAs($user)
+            ->get(route('accounts.edit', $account))
+            ->assertNotFound();
+
+        $this->actingAs($user)
+            ->put(route('accounts.update', $account), [
+                'account_name' => 'Blocked Update',
+                'account_type' => 'bank',
+                'balance' => 1000,
+                'initial_balance' => 1000,
+                'currency' => 'PHP',
+                'is_active' => true,
+                'is_default' => false,
+            ])
+            ->assertNotFound();
+
+        $this->actingAs($user)
+            ->delete(route('accounts.destroy', $account))
+            ->assertNotFound();
     }
 }

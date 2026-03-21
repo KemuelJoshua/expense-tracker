@@ -19,7 +19,9 @@ class AccountIndexTest extends TestCase
 
         $user = User::factory()->admin()->create();
 
-        Accounts::factory()->count(3)->create();
+        Accounts::factory()->count(3)->create([
+            'user_id' => $user->id,
+        ]);
 
         $this->actingAs($user)
             ->get(route('accounts.index'))
@@ -38,6 +40,7 @@ class AccountIndexTest extends TestCase
         $user = User::factory()->admin()->create();
 
         Accounts::factory()->create([
+            'user_id' => $user->id,
             'account_name' => 'GCash Wallet',
             'account_type' => 'e-wallet',
             'bank_name' => 'GCash',
@@ -45,6 +48,7 @@ class AccountIndexTest extends TestCase
         ]);
 
         Accounts::factory()->create([
+            'user_id' => $user->id,
             'account_name' => 'Petty Cash',
             'account_type' => 'cash',
             'bank_name' => null,
@@ -59,6 +63,32 @@ class AccountIndexTest extends TestCase
                 ->where('filters.search', 'gcash')
                 ->has('accounts.data', 1)
                 ->where('accounts.data.0.account_name', 'GCash Wallet'),
+            );
+    }
+
+    public function test_accounts_index_only_returns_the_authenticated_users_accounts(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
+        $otherUser = User::factory()->admin()->create();
+
+        Accounts::factory()->create([
+            'user_id' => $user->id,
+            'account_name' => 'My Account',
+        ]);
+
+        Accounts::factory()->create([
+            'user_id' => $otherUser->id,
+            'account_name' => 'Other Account',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('accounts.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('accounts.data', 1)
+                ->where('accounts.data.0.account_name', 'My Account'),
             );
     }
 }

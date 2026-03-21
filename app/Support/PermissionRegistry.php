@@ -25,6 +25,15 @@ class PermissionRegistry
                     'expenses.delete' => 'Delete expenses',
                 ],
             ],
+            'accounts' => [
+                'label' => 'Accounts',
+                'permissions' => [
+                    'accounts.view' => 'View accounts',
+                    'accounts.create' => 'Create accounts',
+                    'accounts.update' => 'Edit accounts',
+                    'accounts.delete' => 'Delete accounts',
+                ],
+            ],
             'cutoff' => [
                 'label' => 'Cutoff',
                 'permissions' => [

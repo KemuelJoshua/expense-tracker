@@ -78,6 +78,12 @@ const mainNavItems: (NavItem & { permission: string })[] = [
         permission: 'expenses.view',
     },
     {
+        title: 'Accounts',
+        href: '/accounts',
+        icon: ShieldCheck,
+        permission: 'accounts.view',
+    },
+    {
         title: 'Roles',
         href: '/roles',
         icon: ShieldCheck,

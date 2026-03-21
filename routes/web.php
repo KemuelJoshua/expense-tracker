@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\CutoffController;
 use App\Http\Controllers\ExpensesController;
 use App\Http\Controllers\RolesController;
@@ -17,6 +18,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::resource('expenses', ExpensesController::class);
     Route::resource('cutoff', CutoffController::class);
+    Route::resource('accounts', AccountsController::class);
     Route::resource('roles', RolesController::class)
         ->only(['index', 'store', 'update', 'destroy']);
 

@@ -1,12 +1,9 @@
 <script setup lang="ts">
 import {
-    CalendarDays,
     ChevronsLeftRight,
     CircleCheckBig,
-    CirclePause,
     MoreHorizontal,
-    ReceiptText,
-    Wallet,
+    OctagonAlert,
 } from 'lucide-vue-next';
 import EmptyState from '@/components/EmptyState.vue';
 import TableIcon from '@/components/TableIcon.vue';
@@ -25,11 +22,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import {
-    formatAmount,
-    formatDate,
-    formatPaymentDueDay,
-} from '@/lib/formatters';
+import { formatAmount, formatPaymentDueDay } from '@/lib/formatters';
 import type { CutoffExpense, CutoffGroup } from '../types/cutoff';
 
 const props = defineProps<{
@@ -39,10 +32,15 @@ const props = defineProps<{
 
 const emit = defineEmits<{
     (e: 'pay', expense: CutoffExpense): void;
+    (e: 'penalty', expense: CutoffExpense): void;
 }>();
 
 const openPayDialog = (expense: CutoffExpense): void => {
     emit('pay', expense);
+};
+
+const openPenaltyDialog = (expense: CutoffExpense): void => {
+    emit('penalty', expense);
 };
 </script>
 
@@ -76,14 +74,11 @@ const openPayDialog = (expense: CutoffExpense): void => {
         <Table class="table-fixed">
             <TableHeader>
                 <TableRow>
-                    <TableHead class="w-[30%] whitespace-normal"
+                    <TableHead class="w-[40%] whitespace-normal"
                         >Name</TableHead
                     >
-                    <TableHead class="w-[34%] whitespace-normal"
-                        >Schedule</TableHead
-                    >
-                    <TableHead class="w-[16%] text-right">Amount</TableHead>
-                    <TableHead class="w-[16%] text-right">Paid</TableHead>
+                    <TableHead class="w-[20%] text-right">Amount Due</TableHead>
+                    <TableHead class="w-[30%] text-right">Paid</TableHead>
                     <TableHead class="w-18 text-right">Action</TableHead>
                 </TableRow>
             </TableHeader>
@@ -91,7 +86,7 @@ const openPayDialog = (expense: CutoffExpense): void => {
             <TableBody>
                 <template v-if="props.cutoff.items.length === 0">
                     <TableRow>
-                        <TableCell colspan="5" class="py-10">
+                        <TableCell colspan="4" class="py-10">
                             <EmptyState
                                 label="No expenses"
                                 title="Nothing scheduled here"
@@ -122,35 +117,15 @@ const openPayDialog = (expense: CutoffExpense): void => {
                                     >
                                         {{ expense.category ?? expense.type }}
                                     </span>
-                                </div>
-                            </div>
-                        </TableCell>
-
-                        <TableCell class="align-top text-sm whitespace-normal">
-                            <div class="space-y-1">
-                                <div
-                                    class="flex items-center gap-2 text-muted-foreground"
-                                >
-                                    <CalendarDays class="h-3.5 w-3.5" />
-                                    <span class="wrap-break-word">{{
-                                        formatDate(expense.date_start)
-                                    }}</span>
-                                </div>
-                                <div
-                                    class="flex items-center gap-2 text-muted-foreground"
-                                >
-                                    <ReceiptText class="h-3.5 w-3.5" />
-                                    <span class="wrap-break-word">{{
-                                        formatDate(expense.date_end)
-                                    }}</span>
-                                </div>
-                                <div
-                                    class="flex items-center gap-2 text-muted-foreground"
-                                >
-                                    <Wallet class="h-3.5 w-3.5" />
-                                    <span class="wrap-break-word">{{
-                                        formatPaymentDueDay(expense.payment_due)
-                                    }}</span>
+                                    <span
+                                        class="text-xs wrap-break-word text-muted-foreground"
+                                    >
+                                        {{
+                                            formatPaymentDueDay(
+                                                expense.payment_due,
+                                            )
+                                        }}
+                                    </span>
                                 </div>
                             </div>
                         </TableCell>
@@ -159,20 +134,28 @@ const openPayDialog = (expense: CutoffExpense): void => {
                             <span
                                 class="text-sm font-semibold text-foreground tabular-nums"
                             >
-                                ₱{{ formatAmount(expense.total_amount) }}
+                                ₱{{
+                                    formatAmount(expense.effective_due_amount)
+                                }}
+                            </span>
+                            <span
+                                v-if="Number(expense.penalty_amount) > 0"
+                                class="mt-1 block text-xs text-muted-foreground"
+                            >
+                                Includes ₱{{
+                                    formatAmount(expense.penalty_amount)
+                                }}
+                                penalty
                             </span>
                         </TableCell>
 
                         <TableCell class="text-right">
                             <div
-                                class="inline-flex max-w-full flex-col items-end rounded-lg bg-muted/40 px-3 py-2"
+                                class="inline-flex max-w-full flex-col items-end"
                             >
                                 <div class="flex items-center gap-2">
-                                    <Wallet
-                                        class="h-4 w-4 text-muted-foreground"
-                                    />
                                     <span
-                                        class="text-sm font-medium text-foreground tabular-nums"
+                                        class="text-sm font-medium text-destructive tabular-nums"
                                     >
                                         ₱{{
                                             formatAmount(
@@ -185,7 +168,7 @@ const openPayDialog = (expense: CutoffExpense): void => {
                                 <span
                                     class="mt-1 text-xs text-muted-foreground"
                                 >
-                                    Remaining: ₱{{
+                                    Bal: ₱{{
                                         formatAmount(expense.remaining_amount)
                                     }}
                                 </span>
@@ -194,10 +177,9 @@ const openPayDialog = (expense: CutoffExpense): void => {
                                     v-if="Number(expense.carryover_amount) > 0"
                                     class="mt-1 text-xs text-muted-foreground"
                                 >
-                                    Includes ₱{{
+                                    +₱{{
                                         formatAmount(expense.carryover_amount)
                                     }}
-                                    carry-over
                                 </span>
                             </div>
                         </TableCell>
@@ -234,9 +216,12 @@ const openPayDialog = (expense: CutoffExpense): void => {
                                         Move
                                     </DropdownMenuItem>
 
-                                    <DropdownMenuItem class="gap-2">
-                                        <CirclePause class="h-3.5 w-3.5" />
-                                        Skip
+                                    <DropdownMenuItem
+                                        class="gap-2"
+                                        @click="openPenaltyDialog(expense)"
+                                    >
+                                        <OctagonAlert class="h-3.5 w-3.5" />
+                                        Add Penalty
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>

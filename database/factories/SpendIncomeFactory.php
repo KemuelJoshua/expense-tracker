@@ -29,6 +29,7 @@ class SpendIncomeFactory extends Factory
             'description' => fake()->optional()->sentence(),
             'expense_id' => null,
             'account_id' => null,
+            'is_penalty' => false,
             'is_payroll' => $isPayroll,
             'payroll_month' => $isPayroll ? fake()->numberBetween(1, 12) : null,
             'payroll_year' => $isPayroll ? (int) fake()->year() : null,

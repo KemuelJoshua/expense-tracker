@@ -9,6 +9,8 @@ export interface CutoffExpense {
     payment_due: number | string | null;
     total_amount: number | string;
     paid_amount: number | string;
+    penalty_amount: number | string;
+    effective_due_amount: number | string;
     paid_this_month: number | string;
     current_month_paid: number | string;
     carryover_amount: number | string;

@@ -21,6 +21,7 @@ const props = defineProps<{
     open: boolean;
     expense: CutoffExpense | null;
     monthLabel: string;
+    actionType: 'payment' | 'penalty';
 }>();
 
 const form = defineModel<{
@@ -50,6 +51,12 @@ const handleOpenChange = (value: boolean): void => {
 const dueAmount = computed(() => {
     return props.expense === null
         ? '0.00'
+        : formatAmount(props.expense.effective_due_amount);
+});
+
+const baseDueAmount = computed(() => {
+    return props.expense === null
+        ? '0.00'
         : formatAmount(props.expense.total_amount);
 });
 
@@ -76,6 +83,20 @@ const remainingAmount = computed(() => {
         ? '0.00'
         : formatAmount(props.expense.remaining_amount);
 });
+
+const dialogTitle = computed(() => {
+    return props.actionType === 'penalty' ? 'Add penalty' : 'Record payment';
+});
+
+const dialogDescription = computed(() => {
+    return props.actionType === 'penalty'
+        ? `Add a penalty amount for this expense in ${props.monthLabel}. This affects only the selected month and will not turn into next month's carry-over credit.`
+        : `Add a spend entry for this expense in ${props.monthLabel}. The record will be linked to the expense automatically.`;
+});
+
+const amountLabel = computed(() => {
+    return props.actionType === 'penalty' ? 'Penalty Amount' : 'Amount';
+});
 </script>
 
 <template>
@@ -85,13 +106,11 @@ const remainingAmount = computed(() => {
         >
             <DialogHeader class="border-b px-6 py-5">
                 <DialogTitle class="text-xl font-semibold tracking-tight">
-                    Record payment
+                    {{ dialogTitle }}
                 </DialogTitle>
 
                 <DialogDescription class="mt-1 text-sm text-muted-foreground">
-                    Add a spend entry for this expense in
-                    {{ props.monthLabel }}. The record will be linked to the
-                    expense automatically.
+                    {{ dialogDescription }}
                 </DialogDescription>
             </DialogHeader>
 
@@ -138,16 +157,31 @@ const remainingAmount = computed(() => {
                             <p
                                 class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                             >
-                                Remaining to pay
+                                {{
+                                    props.actionType === 'penalty'
+                                        ? 'Current amount due'
+                                        : 'Remaining to pay'
+                                }}
                             </p>
                             <p
                                 class="mt-2 text-2xl font-semibold text-foreground"
                             >
-                                ₱{{ remainingAmount }}
+                                ₱{{
+                                    props.actionType === 'penalty'
+                                        ? baseDueAmount
+                                        : remainingAmount
+                                }}
                             </p>
                             <p class="mt-2 text-sm text-muted-foreground">
-                                Current due after this month's payments and any
-                                carry-over from the previous month.
+                                <template v-if="props.actionType === 'penalty'">
+                                    Penalties are tracked for this month only
+                                    and do not become carry-over credit next
+                                    month.
+                                </template>
+                                <template v-else>
+                                    Current due after this month's payments and
+                                    any carry-over from the previous month.
+                                </template>
                             </p>
                         </div>
                     </div>
@@ -157,12 +191,20 @@ const remainingAmount = computed(() => {
                             <p
                                 class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
                             >
-                                Due This Month
+                                {{
+                                    props.actionType === 'penalty'
+                                        ? 'Base Due'
+                                        : 'Due This Month'
+                                }}
                             </p>
                             <p
                                 class="mt-2 text-base font-semibold text-foreground"
                             >
-                                ₱{{ dueAmount }}
+                                ₱{{
+                                    props.actionType === 'penalty'
+                                        ? baseDueAmount
+                                        : dueAmount
+                                }}
                             </p>
                         </div>
 
@@ -176,6 +218,27 @@ const remainingAmount = computed(() => {
                                 class="mt-2 text-base font-semibold text-foreground"
                             >
                                 ₱{{ paidThisMonth }}
+                            </p>
+                        </div>
+
+                        <div
+                            v-if="
+                                props.expense !== null &&
+                                Number(props.expense.penalty_amount) > 0
+                            "
+                            class="rounded-xl border bg-muted/20 p-4"
+                        >
+                            <p
+                                class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                            >
+                                Penalty This Month
+                            </p>
+                            <p
+                                class="mt-2 text-base font-semibold text-foreground"
+                            >
+                                ₱{{
+                                    formatAmount(props.expense.penalty_amount)
+                                }}
                             </p>
                         </div>
 
@@ -209,7 +272,7 @@ const remainingAmount = computed(() => {
                     <div class="grid gap-4 md:grid-cols-2">
                         <div class="grid gap-2">
                             <Label for="cutoff-payment-amount">
-                                Amount
+                                {{ amountLabel }}
                                 <span class="ml-1 text-destructive">*</span>
                             </Label>
                             <Input
@@ -279,7 +342,13 @@ const remainingAmount = computed(() => {
                         :disabled="form.processing"
                         class="min-w-40"
                     >
-                        {{ form.processing ? 'Saving...' : 'Save Payment' }}
+                        {{
+                            form.processing
+                                ? 'Saving...'
+                                : props.actionType === 'penalty'
+                                  ? 'Save Penalty'
+                                  : 'Save Payment'
+                        }}
                     </Button>
                 </DialogFooter>
             </form>

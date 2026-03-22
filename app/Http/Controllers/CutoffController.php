@@ -114,6 +114,8 @@ class CutoffController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            $isPenalty = ($validated['action_type'] ?? 'payment') === 'penalty';
+
             SpendIncome::create([
                 'user_id' => $userId,
                 'entry_type' => 'spend',
@@ -121,22 +123,29 @@ class CutoffController extends Controller
                 'amount' => $validated['amount'],
                 'description' => $validated['description'] !== null && $validated['description'] !== ''
                     ? $validated['description']
-                    : "Cutoff payment for {$lockedExpense->name}",
+                    : ($isPenalty
+                        ? "Cutoff penalty for {$lockedExpense->name}"
+                        : "Cutoff payment for {$lockedExpense->name}"),
                 'expense_id' => $lockedExpense->id,
                 'account_id' => null,
+                'is_penalty' => $isPenalty,
                 'is_payroll' => false,
                 'payroll_month' => null,
                 'payroll_year' => null,
             ]);
 
-            $lockedExpense->update([
-                'paid_amount' => max(0, round((float) $lockedExpense->paid_amount + (float) $validated['amount'], 4)),
-            ]);
+            if (! $isPenalty) {
+                $lockedExpense->update([
+                    'paid_amount' => max(0, round((float) $lockedExpense->paid_amount + (float) $validated['amount'], 4)),
+                ]);
+            }
         });
 
         return redirect()
             ->route('cutoff.index', ['month' => $selectedMonth])
-            ->with('success', 'Expense payment recorded successfully.');
+            ->with('success', ($validated['action_type'] ?? 'payment') === 'penalty'
+                ? 'Expense penalty recorded successfully.'
+                : 'Expense payment recorded successfully.');
     }
 
     /**
@@ -164,24 +173,34 @@ class CutoffController extends Controller
      */
     private function transformExpenseForMonth(Expenses $expense, Carbon $monthStart, Carbon $monthEnd): array
     {
-        $trackedLifetimePaid = round((float) $expense->spendIncomes->sum(
+        $regularPayments = $expense->spendIncomes
+            ->filter(fn (SpendIncome $payment): bool => $payment->is_penalty !== true);
+        $penaltyEntries = $expense->spendIncomes
+            ->filter(fn (SpendIncome $payment): bool => $payment->is_penalty === true);
+
+        $trackedLifetimePaid = round((float) $regularPayments->sum(
             fn (SpendIncome $payment): float => (float) $payment->amount
         ), 4);
 
         $legacyPaid = max(0, round((float) $expense->paid_amount - $trackedLifetimePaid, 4));
         $previousPayments = round(
-            $legacyPaid + (float) $expense->spendIncomes
+            $legacyPaid + (float) $regularPayments
                 ->filter(fn (SpendIncome $payment): bool => $payment->transaction_date !== null && $payment->transaction_date->lt($monthStart))
                 ->sum(fn (SpendIncome $payment): float => (float) $payment->amount),
             4,
         );
-        $currentMonthPayments = round((float) $expense->spendIncomes
+        $currentMonthPayments = round((float) $regularPayments
+            ->filter(fn (SpendIncome $payment): bool => $payment->transaction_date !== null
+                && $payment->transaction_date->betweenIncluded($monthStart, $monthEnd))
+            ->sum(fn (SpendIncome $payment): float => (float) $payment->amount), 4);
+        $currentMonthPenaltyAmount = round((float) $penaltyEntries
             ->filter(fn (SpendIncome $payment): bool => $payment->transaction_date !== null
                 && $payment->transaction_date->betweenIncluded($monthStart, $monthEnd))
             ->sum(fn (SpendIncome $payment): float => (float) $payment->amount), 4);
         $carryoverAmount = max(0, round($previousPayments - $this->calculateDueBeforeMonth($expense, $monthStart), 4));
         $paidThisMonth = round($currentMonthPayments + $carryoverAmount, 4);
-        $remainingAmount = max(0, round((float) $expense->total_amount - $paidThisMonth, 4));
+        $effectiveDueAmount = round((float) $expense->total_amount + $currentMonthPenaltyAmount, 4);
+        $remainingAmount = max(0, round($effectiveDueAmount - $paidThisMonth, 4));
 
         return [
             'id' => $expense->id,
@@ -194,6 +213,8 @@ class CutoffController extends Controller
             'payment_due' => $expense->payment_due,
             'total_amount' => round((float) $expense->total_amount, 4),
             'paid_amount' => round((float) $expense->paid_amount, 4),
+            'penalty_amount' => $currentMonthPenaltyAmount,
+            'effective_due_amount' => $effectiveDueAmount,
             'paid_this_month' => $paidThisMonth,
             'current_month_paid' => $currentMonthPayments,
             'carryover_amount' => $carryoverAmount,

@@ -20,6 +20,7 @@ class CutoffPaymentRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'action_type' => ['required', 'string', 'in:payment,penalty'],
             'month' => ['required', 'date_format:Y-m'],
             'expense_id' => [
                 'required',
@@ -67,6 +68,7 @@ class CutoffPaymentRequest extends FormRequest
     public function messages(): array
     {
         return [
+            'action_type.required' => 'The cutoff action is required.',
             'month.required' => 'The cutoff month is required.',
             'month.date_format' => 'The cutoff month must use the YYYY-MM format.',
             'expense_id.required' => 'Please select an expense to pay.',

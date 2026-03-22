@@ -151,4 +151,68 @@ class CutoffIndexTest extends TestCase
                 ->where('cutoffs.first.items.0.remaining_amount', 500),
             );
     }
+
+    public function test_cutoff_penalty_affects_only_the_selected_month_and_does_not_become_future_carryover(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
+
+        $expense = Expenses::factory()->create([
+            'created_by' => $user->id,
+            'name' => 'Water Utility',
+            'date_start' => '2026-02-01',
+            'date_end' => null,
+            'pay_in' => 'first',
+            'total_amount' => 1000,
+            'paid_amount' => 1200,
+        ]);
+
+        SpendIncome::factory()->create([
+            'user_id' => $user->id,
+            'entry_type' => 'spend',
+            'transaction_date' => '2026-02-05',
+            'amount' => 1200,
+            'description' => 'February payment',
+            'expense_id' => $expense->id,
+            'account_id' => null,
+            'is_penalty' => false,
+            'is_payroll' => false,
+            'payroll_month' => null,
+            'payroll_year' => null,
+        ]);
+
+        SpendIncome::factory()->create([
+            'user_id' => $user->id,
+            'entry_type' => 'spend',
+            'transaction_date' => '2026-03-04',
+            'amount' => 100,
+            'description' => 'March penalty',
+            'expense_id' => $expense->id,
+            'account_id' => null,
+            'is_penalty' => true,
+            'is_payroll' => false,
+            'payroll_month' => null,
+            'payroll_year' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('cutoff.index', ['month' => '2026-03']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('cutoffs.first.items.0.penalty_amount', 100)
+                ->where('cutoffs.first.items.0.carryover_amount', 200)
+                ->where('cutoffs.first.items.0.current_month_paid', 0)
+                ->where('cutoffs.first.items.0.remaining_amount', 900),
+            );
+
+        $this->actingAs($user)
+            ->get(route('cutoff.index', ['month' => '2026-04']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('cutoffs.first.items.0.penalty_amount', 0)
+                ->where('cutoffs.first.items.0.carryover_amount', 0)
+                ->where('cutoffs.first.items.0.remaining_amount', 1000),
+            );
+    }
 }

@@ -21,6 +21,7 @@ class SpendIncome extends Model
         'description',
         'expense_id',
         'account_id',
+        'is_penalty',
         'is_payroll',
         'payroll_month',
         'payroll_year',
@@ -34,6 +35,7 @@ class SpendIncome extends Model
         return [
             'transaction_date' => 'date',
             'amount' => EncryptedDecimal::class.':4',
+            'is_penalty' => 'boolean',
             'is_payroll' => 'boolean',
             'payroll_month' => 'integer',
             'payroll_year' => 'integer',

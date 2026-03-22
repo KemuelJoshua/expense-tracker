@@ -29,8 +29,10 @@ const auth = computed<Auth>(() => page.props.auth as Auth);
 const { form } = useFilterForm();
 const paymentDialogOpen = ref(false);
 const selectedExpense = ref<CutoffExpense | null>(null);
+const actionType = ref<'payment' | 'penalty'>('payment');
 
 const paymentForm = useForm({
+    action_type: 'payment' as 'payment' | 'penalty',
     month: props.filters.month,
     expense_id: '',
     transaction_date: '',
@@ -106,11 +108,16 @@ const buildDefaultTransactionDate = (
     return `${month}-${String(day).padStart(2, '0')}`;
 };
 
-const openPayDialog = (expense: CutoffExpense): void => {
+const openActionDialog = (
+    expense: CutoffExpense,
+    type: 'payment' | 'penalty',
+): void => {
     selectedExpense.value = expense;
+    actionType.value = type;
     paymentDialogOpen.value = true;
     paymentForm.reset();
     paymentForm.clearErrors();
+    paymentForm.action_type = type;
     paymentForm.month = props.filters.month;
     paymentForm.expense_id = String(expense.id);
     paymentForm.transaction_date = buildDefaultTransactionDate(
@@ -118,17 +125,24 @@ const openPayDialog = (expense: CutoffExpense): void => {
         expense.payment_due,
     );
     paymentForm.amount =
-        Number(expense.remaining_amount) > 0
-            ? Number(expense.remaining_amount).toFixed(2)
+        type === 'payment'
+            ? Number(expense.remaining_amount) > 0
+                ? Number(expense.remaining_amount).toFixed(2)
+                : ''
             : '';
-    paymentForm.description = `Cutoff payment for ${expense.name}`;
+    paymentForm.description =
+        type === 'penalty'
+            ? `Penalty for ${expense.name}`
+            : `Cutoff payment for ${expense.name}`;
 };
 
 const closePayDialog = (): void => {
     paymentDialogOpen.value = false;
     selectedExpense.value = null;
+    actionType.value = 'payment';
     paymentForm.reset();
     paymentForm.clearErrors();
+    paymentForm.action_type = 'payment';
     paymentForm.month = props.filters.month;
 };
 
@@ -152,6 +166,7 @@ const submitPayment = (): void => {
                     :open="paymentDialogOpen"
                     :expense="selectedExpense"
                     :month-label="summary.month"
+                    :action-type="actionType"
                     v-model:form="paymentForm"
                     @update:open="paymentDialogOpen = $event"
                     @close="closePayDialog"
@@ -226,12 +241,18 @@ const submitPayment = (): void => {
                     <Sheet
                         :cutoff="cutoffs.first"
                         :can-pay="canCreatePayment"
-                        @pay="openPayDialog"
+                        @pay="(expense) => openActionDialog(expense, 'payment')"
+                        @penalty="
+                            (expense) => openActionDialog(expense, 'penalty')
+                        "
                     />
                     <Sheet
                         :cutoff="cutoffs.second"
                         :can-pay="canCreatePayment"
-                        @pay="openPayDialog"
+                        @pay="(expense) => openActionDialog(expense, 'payment')"
+                        @penalty="
+                            (expense) => openActionDialog(expense, 'penalty')
+                        "
                     />
                 </div>
             </div>

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\CutoffController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExpensesController;
 use App\Http\Controllers\RolesController;
 use App\Http\Controllers\SpendIncomeController;
@@ -28,8 +29,7 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified', EnsureUserIsApproved::class])->group(function () {
-    Route::inertia('dashboard', 'Dashboard')
-        ->middleware('can:dashboard.view')
+    Route::get('dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
 
     Route::resource('expenses', ExpensesController::class);

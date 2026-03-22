@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedDecimal;
 use Database\Factories\SpendIncomeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -32,7 +33,7 @@ class SpendIncome extends Model
     {
         return [
             'transaction_date' => 'date',
-            'amount' => 'decimal:4',
+            'amount' => EncryptedDecimal::class.':4',
             'is_payroll' => 'boolean',
             'payroll_month' => 'integer',
             'payroll_year' => 'integer',

@@ -35,7 +35,6 @@ class SpendIncomeController extends Controller
                     $entryQuery
                         ->where('entry_type', 'like', "%{$search}%")
                         ->orWhere('transaction_date', 'like', "%{$search}%")
-                        ->orWhere('amount', 'like', "%{$search}%")
                         ->orWhere('description', 'like', "%{$search}%")
                         ->orWhereHas('expense', function (Builder $expenseQuery) use ($search): void {
                             $expenseQuery->where('name', 'like', "%{$search}%");

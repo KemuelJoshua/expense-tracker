@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedDecimal;
+use App\Casts\NullableEncryptedString;
 use Database\Factories\AccountsFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -33,8 +35,9 @@ class Accounts extends Model
     protected function casts(): array
     {
         return [
-            'balance' => 'decimal:4',
-            'initial_balance' => 'decimal:4',
+            'balance' => EncryptedDecimal::class.':4',
+            'initial_balance' => EncryptedDecimal::class.':4',
+            'account_number' => NullableEncryptedString::class,
             'is_active' => 'boolean',
             'is_default' => 'boolean',
         ];

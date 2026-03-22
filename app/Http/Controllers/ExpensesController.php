@@ -124,6 +124,7 @@ class ExpensesController extends Controller
      */
     private function normalizeExpensePayload(array $validated): array
     {
+        $validated['paid_amount'] = $validated['paid_amount'] ?? 0;
         $validated['payment_mode'] = $validated['payment_mode'] ?? null;
 
         if ($validated['type'] === 'loan') {

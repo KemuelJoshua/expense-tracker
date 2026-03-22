@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\EncryptedDecimal;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -36,8 +37,8 @@ class Expenses extends Model
         return [
             'payment_due' => 'integer',
             'is_recurring' => 'boolean',
-            'total_amount' => 'decimal:4',
-            'paid_amount' => 'decimal:4',
+            'total_amount' => EncryptedDecimal::class.':4',
+            'paid_amount' => EncryptedDecimal::class.':4',
         ];
     }
 }

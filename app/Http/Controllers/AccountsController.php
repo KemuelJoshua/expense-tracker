@@ -28,9 +28,6 @@ class AccountsController extends Controller
                     $expenseQuery
                         ->where('account_name', 'like', "%{$search}%")
                         ->orWhere('account_type', 'like', "%{$search}%")
-                        ->orWhere('balance', 'like', "%{$search}%")
-                        ->orWhere('initial_balance', 'like', "%{$search}%")
-                        ->orWhere('account_number', 'like', "%{$search}%")
                         ->orWhere('bank_name', 'like', "%{$search}%");
                 });
             })

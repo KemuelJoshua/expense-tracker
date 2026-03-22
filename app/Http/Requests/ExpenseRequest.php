@@ -29,7 +29,7 @@ class ExpenseRequest extends FormRequest
             'reference_no' => ['nullable', 'string', 'max:255'],
             'date_start' => ['required', 'date'],
             'date_end' => [
-                Rule::requiredIf($type === 'loan' && $this->input('payment_mode') === 'installment'),
+                Rule::requiredIf($type === 'loan'),
                 'nullable',
                 'date',
                 'after_or_equal:date_start',
@@ -78,7 +78,7 @@ class ExpenseRequest extends FormRequest
             'payment_due.min' => 'Payment due must be between day 1 and 31.',
             'payment_due.max' => 'Payment due must be between day 1 and 31.',
             'date_end.after_or_equal' => 'End date must be the same as or after the start date.',
-            'date_end.required' => 'End date is required for an installment loan.',
+            'date_end.required' => 'End date is required for loan expenses.',
         ];
     }
 }

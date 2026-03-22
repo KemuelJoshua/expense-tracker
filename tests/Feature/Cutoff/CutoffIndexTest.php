@@ -152,6 +152,65 @@ class CutoffIndexTest extends TestCase
             );
     }
 
+    public function test_cutoff_index_carries_previous_unpaid_balance_into_the_selected_month_due(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
+
+        $expense = Expenses::factory()->create([
+            'created_by' => $user->id,
+            'name' => 'Equipment Lease',
+            'date_start' => '2026-02-01',
+            'date_end' => null,
+            'pay_in' => 'first',
+            'total_amount' => 1000,
+            'paid_amount' => 700,
+        ]);
+
+        SpendIncome::factory()->create([
+            'user_id' => $user->id,
+            'entry_type' => 'spend',
+            'transaction_date' => '2026-02-05',
+            'amount' => 700,
+            'description' => 'Partial February payment',
+            'expense_id' => $expense->id,
+            'account_id' => null,
+            'is_penalty' => false,
+            'is_payroll' => false,
+            'payroll_month' => null,
+            'payroll_year' => null,
+        ]);
+
+        SpendIncome::factory()->create([
+            'user_id' => $user->id,
+            'entry_type' => 'spend',
+            'transaction_date' => '2026-03-08',
+            'amount' => 200,
+            'description' => 'March payment',
+            'expense_id' => $expense->id,
+            'account_id' => null,
+            'is_penalty' => false,
+            'is_payroll' => false,
+            'payroll_month' => null,
+            'payroll_year' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('cutoff.index', ['month' => '2026-03']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('summary.total_amount', 1300)
+                ->where('summary.total_paid', 200)
+                ->where('cutoffs.first.total_amount', 1300)
+                ->where('cutoffs.first.items.0.previous_balance_amount', 300)
+                ->where('cutoffs.first.items.0.effective_due_amount', 1300)
+                ->where('cutoffs.first.items.0.current_month_paid', 200)
+                ->where('cutoffs.first.items.0.carryover_amount', 0)
+                ->where('cutoffs.first.items.0.remaining_amount', 1100),
+            );
+    }
+
     public function test_cutoff_penalty_affects_only_the_selected_month_and_does_not_become_future_carryover(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);
@@ -211,8 +270,213 @@ class CutoffIndexTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->where('cutoffs.first.items.0.penalty_amount', 0)
+                ->where('cutoffs.first.items.0.previous_balance_amount', 800)
                 ->where('cutoffs.first.items.0.carryover_amount', 0)
-                ->where('cutoffs.first.items.0.remaining_amount', 1000),
+                ->where('cutoffs.first.items.0.remaining_amount', 1800),
+            );
+    }
+
+    public function test_cutoff_keeps_an_ended_loan_visible_when_it_has_unpaid_balance(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
+
+        $expense = Expenses::factory()->create([
+            'created_by' => $user->id,
+            'name' => 'Bike Loan',
+            'type' => 'loan',
+            'date_start' => '2026-01-01',
+            'date_end' => '2026-03-31',
+            'pay_in' => 'first',
+            'total_amount' => 1000,
+            'paid_amount' => 2200,
+        ]);
+
+        SpendIncome::factory()->create([
+            'user_id' => $user->id,
+            'entry_type' => 'spend',
+            'transaction_date' => '2026-01-05',
+            'amount' => 1000,
+            'description' => 'January payment',
+            'expense_id' => $expense->id,
+            'account_id' => null,
+            'is_penalty' => false,
+            'is_payroll' => false,
+            'payroll_month' => null,
+            'payroll_year' => null,
+        ]);
+
+        SpendIncome::factory()->create([
+            'user_id' => $user->id,
+            'entry_type' => 'spend',
+            'transaction_date' => '2026-02-05',
+            'amount' => 1000,
+            'description' => 'February payment',
+            'expense_id' => $expense->id,
+            'account_id' => null,
+            'is_penalty' => false,
+            'is_payroll' => false,
+            'payroll_month' => null,
+            'payroll_year' => null,
+        ]);
+
+        SpendIncome::factory()->create([
+            'user_id' => $user->id,
+            'entry_type' => 'spend',
+            'transaction_date' => '2026-03-05',
+            'amount' => 200,
+            'description' => 'March partial payment',
+            'expense_id' => $expense->id,
+            'account_id' => null,
+            'is_penalty' => false,
+            'is_payroll' => false,
+            'payroll_month' => null,
+            'payroll_year' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('cutoff.index', ['month' => '2026-04']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('summary.count', 1)
+                ->where('summary.total_amount', 800)
+                ->where('cutoffs.first.items.0.name', 'Bike Loan')
+                ->where('cutoffs.first.items.0.total_amount', 0)
+                ->where('cutoffs.first.items.0.previous_balance_amount', 800)
+                ->where('cutoffs.first.items.0.remaining_amount', 800),
+            );
+    }
+
+    public function test_cutoff_hides_an_ended_loan_when_it_is_fully_paid(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
+
+        $expense = Expenses::factory()->create([
+            'created_by' => $user->id,
+            'name' => 'Phone Loan',
+            'type' => 'loan',
+            'date_start' => '2026-01-01',
+            'date_end' => '2026-03-31',
+            'pay_in' => 'first',
+            'total_amount' => 1000,
+            'paid_amount' => 3000,
+        ]);
+
+        foreach (['2026-01-05', '2026-02-05', '2026-03-05'] as $date) {
+            SpendIncome::factory()->create([
+                'user_id' => $user->id,
+                'entry_type' => 'spend',
+                'transaction_date' => $date,
+                'amount' => 1000,
+                'description' => 'Loan payment',
+                'expense_id' => $expense->id,
+                'account_id' => null,
+                'is_penalty' => false,
+                'is_payroll' => false,
+                'payroll_month' => null,
+                'payroll_year' => null,
+            ]);
+        }
+
+        $this->actingAs($user)
+            ->get(route('cutoff.index', ['month' => '2026-04']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('summary.count', 0)
+                ->where('cutoffs.first.count', 0)
+                ->where('cutoffs.second.count', 0),
+            );
+    }
+
+    public function test_cutoff_does_not_include_a_fully_paid_one_time_loan_in_the_next_month(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
+
+        $expense = Expenses::factory()->create([
+            'created_by' => $user->id,
+            'name' => 'Appliance Loan',
+            'type' => 'loan',
+            'payment_mode' => 'one_time',
+            'date_start' => '2026-03-01',
+            'date_end' => '2026-06-30',
+            'pay_in' => 'first',
+            'total_amount' => 1000,
+            'paid_amount' => 1000,
+        ]);
+
+        SpendIncome::factory()->create([
+            'user_id' => $user->id,
+            'entry_type' => 'spend',
+            'transaction_date' => '2026-03-10',
+            'amount' => 1000,
+            'description' => 'Full payment',
+            'expense_id' => $expense->id,
+            'account_id' => null,
+            'is_penalty' => false,
+            'is_payroll' => false,
+            'payroll_month' => null,
+            'payroll_year' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('cutoff.index', ['month' => '2026-04']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('summary.count', 0)
+                ->where('summary.total_amount', 0)
+                ->where('cutoffs.first.count', 0)
+                ->where('cutoffs.second.count', 0),
+            );
+    }
+
+    public function test_cutoff_carries_an_unpaid_one_time_loan_balance_into_the_next_month(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
+
+        $expense = Expenses::factory()->create([
+            'created_by' => $user->id,
+            'name' => 'Appliance Loan',
+            'type' => 'loan',
+            'payment_mode' => 'one_time',
+            'date_start' => '2026-03-01',
+            'date_end' => '2026-06-30',
+            'pay_in' => 'first',
+            'total_amount' => 1000,
+            'paid_amount' => 400,
+        ]);
+
+        SpendIncome::factory()->create([
+            'user_id' => $user->id,
+            'entry_type' => 'spend',
+            'transaction_date' => '2026-03-10',
+            'amount' => 400,
+            'description' => 'Partial payment',
+            'expense_id' => $expense->id,
+            'account_id' => null,
+            'is_penalty' => false,
+            'is_payroll' => false,
+            'payroll_month' => null,
+            'payroll_year' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('cutoff.index', ['month' => '2026-04']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('summary.count', 1)
+                ->where('summary.total_amount', 600)
+                ->where('cutoffs.first.items.0.name', 'Appliance Loan')
+                ->where('cutoffs.first.items.0.total_amount', 0)
+                ->where('cutoffs.first.items.0.previous_balance_amount', 600)
+                ->where('cutoffs.first.items.0.effective_due_amount', 600)
+                ->where('cutoffs.first.items.0.remaining_amount', 600),
             );
     }
 }

@@ -44,7 +44,6 @@ class SpendIncomeController extends Controller
                         });
                 });
             })
-            ->latest('transaction_date')
             ->latest('id')
             ->paginate(10)
             ->withQueryString()

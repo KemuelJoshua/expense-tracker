@@ -93,6 +93,18 @@ const detailLabel = (entry: SpendIncome): string => {
 
     return entry.description || 'No description';
 };
+
+const signedAmount = (entry: SpendIncome): string => {
+    const prefix = entry.entry_type === 'income' ? '+' : '-';
+
+    return `${prefix}₱${formatAmount(entry.amount)}`;
+};
+
+const amountClass = (entry: SpendIncome): string => {
+    return entry.entry_type === 'income'
+        ? 'text-green-600 dark:text-green-400'
+        : 'text-destructive';
+};
 </script>
 
 <template>
@@ -187,8 +199,11 @@ const detailLabel = (entry: SpendIncome): string => {
                         </TableCell>
 
                         <TableCell class="align-top text-right">
-                            <span class="text-sm font-semibold text-foreground">
-                                ₱{{ formatAmount(entry.amount) }}
+                            <span
+                                class="text-sm font-semibold"
+                                :class="amountClass(entry)"
+                            >
+                                {{ signedAmount(entry) }}
                             </span>
                         </TableCell>
 

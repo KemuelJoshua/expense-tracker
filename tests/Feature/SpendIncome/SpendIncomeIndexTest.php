@@ -39,4 +39,33 @@ class SpendIncomeIndexTest extends TestCase
                 ->has('options.accounts'),
             );
     }
+
+    public function test_index_returns_newest_entries_first(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
+
+        SpendIncome::factory()->create([
+            'user_id' => $user->id,
+            'transaction_date' => '2026-03-20',
+            'entry_type' => 'spend',
+            'description' => 'Older entry',
+        ]);
+
+        SpendIncome::factory()->create([
+            'user_id' => $user->id,
+            'transaction_date' => '2026-03-10',
+            'entry_type' => 'income',
+            'description' => 'Newest entry',
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('spend-income.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('spendIncomes.data.0.description', 'Newest entry')
+                ->where('spendIncomes.data.1.description', 'Older entry'),
+            );
+    }
 }

@@ -134,7 +134,6 @@ class ExpensesController extends Controller
             } else {
                 $validated['is_recurring'] = false;
                 $validated['recurring_cycle'] = null;
-                $validated['date_end'] = null;
             }
         }
 

@@ -65,7 +65,7 @@ class ExpenseStoreTest extends TestCase
             ->assertSessionHasErrors(['pay_in']);
     }
 
-    public function test_installment_loan_requires_end_date_when_creating_an_expense(): void
+    public function test_loan_requires_end_date_when_creating_an_expense(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);
 
@@ -80,13 +80,13 @@ class ExpenseStoreTest extends TestCase
                 'date_start' => '2026-03-01',
                 'payment_due' => 15,
                 'pay_in' => 'first',
-                'payment_mode' => 'installment',
+                'payment_mode' => 'one_time',
             ])
             ->assertRedirect(route('expenses.index'))
             ->assertSessionHasErrors(['date_end']);
     }
 
-    public function test_one_time_loan_clears_recurring_values_when_creating_an_expense(): void
+    public function test_one_time_loan_keeps_its_end_date_while_clearing_recurring_values_when_creating_an_expense(): void
     {
         $this->seed(RolesAndPermissionsSeeder::class);
 
@@ -116,7 +116,7 @@ class ExpenseStoreTest extends TestCase
         $this->assertSame('one_time', $expense->payment_mode);
         $this->assertFalse((bool) $expense->is_recurring);
         $this->assertNull($expense->recurring_cycle);
-        $this->assertNull($expense->date_end);
+        $this->assertSame('2026-06-01', $expense->date_end);
     }
 
     public function test_utilities_require_a_valid_payment_mode_when_creating_an_expense(): void

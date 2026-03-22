@@ -178,4 +178,37 @@ class ExpenseUpdateTest extends TestCase
             ->delete(route('expenses.destroy', $expense))
             ->assertNotFound();
     }
+
+    public function test_loan_requires_end_date_when_updating_an_expense(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
+
+        $expense = Expenses::factory()->create([
+            'created_by' => $user->id,
+            'type' => 'loan',
+            'date_start' => '2026-03-01',
+            'date_end' => '2026-08-01',
+            'payment_due' => 15,
+            'pay_in' => 'first',
+            'payment_mode' => 'installment',
+        ]);
+
+        $this->actingAs($user)
+            ->from(route('expenses.index'))
+            ->put(route('expenses.update', $expense), [
+                'name' => 'Laptop Loan',
+                'total_amount' => 24000,
+                'paid_amount' => 0,
+                'type' => 'loan',
+                'date_start' => '2026-03-01',
+                'date_end' => '',
+                'payment_due' => 15,
+                'pay_in' => 'first',
+                'payment_mode' => 'one_time',
+            ])
+            ->assertRedirect(route('expenses.index'))
+            ->assertSessionHasErrors(['date_end']);
+    }
 }

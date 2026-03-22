@@ -23,7 +23,7 @@ const isUtilities = computed(() => form.value.type === 'utilities');
 const requiresPaymentMode = computed(() => isLoan.value || isUtilities.value);
 const showsRecurringSection = computed(() => !isLoan.value && !isUtilities.value);
 const showsDateEnd = computed(() => {
-    return !isUtilities.value && (!isLoan.value || form.value.payment_mode === 'installment');
+    return !isUtilities.value;
 });
 const amountLabel = computed(() => {
     if (isUtilities.value && form.value.payment_mode === 'variable_amount') {
@@ -99,7 +99,6 @@ watch(
 
             form.value.is_recurring = 0;
             form.value.recurring_cycle = '';
-            form.value.date_end = '';
 
             return;
         }
@@ -293,7 +292,7 @@ watch(
                         <Label for="date_end">
                             {{
                                 isLoan
-                                    ? 'End Date (required for installment loan)'
+                                    ? 'End Date (required for loan)'
                                     : 'End Date (leave blank for monthly/recurring)'
                             }}
                         </Label>

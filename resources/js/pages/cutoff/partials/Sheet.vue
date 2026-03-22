@@ -139,13 +139,16 @@ const openPenaltyDialog = (expense: CutoffExpense): void => {
                                 }}
                             </span>
                             <span
-                                v-if="Number(expense.penalty_amount) > 0"
+                                v-if="+expense.penalty_amount"
                                 class="mt-1 block text-xs text-muted-foreground"
                             >
-                                Includes ₱{{
-                                    formatAmount(expense.penalty_amount)
-                                }}
-                                penalty
+                                Incl. ₱{{ formatAmount(expense.penalty_amount) }} penalty
+                            </span>
+                            <span
+                                v-if="+expense.previous_balance_amount"
+                                class="mt-1 block text-xs text-muted-foreground"
+                            >
+                                Incl. ₱{{ formatAmount(expense.previous_balance_amount) }} prev. balance
                             </span>
                         </TableCell>
 

@@ -37,12 +37,19 @@ class CutoffController extends Controller
             ->where(function ($query) use ($monthStart) {
                 $query->whereNull('date_end')
                     ->orWhere('date_end', '>=', $monthStart);
+
+                $query->orWhere('type', 'loan');
             })
             ->orderBy('pay_in')
             ->orderBy('name')
             ->get();
 
         $expenseSnapshots = $expenses
+            ->filter(fn (Expenses $expense): bool => $this->isExpenseVisibleInMonth(
+                expense: $expense,
+                monthStart: $monthStart,
+                monthEnd: $monthEnd,
+            ))
             ->map(fn (Expenses $expense): array => $this->transformExpenseForMonth(
                 expense: $expense,
                 monthStart: $monthStart,
@@ -60,7 +67,7 @@ class CutoffController extends Controller
                         'key' => $payIn,
                         'label' => $payIn === 'first' ? 'First Cutoff' : 'Second Cutoff',
                         'count' => $items->count(),
-                        'total_amount' => round((float) $items->sum('total_amount'), 4),
+                        'total_amount' => round((float) $items->sum('effective_due_amount'), 4),
                         'total_paid' => round((float) $items->sum('paid_this_month'), 4),
                         'items' => $items->all(),
                     ],
@@ -74,7 +81,7 @@ class CutoffController extends Controller
             'summary' => [
                 'month' => $monthStart->format('F Y'),
                 'count' => $expenseSnapshots->count(),
-                'total_amount' => round((float) $expenseSnapshots->sum('total_amount'), 4),
+                'total_amount' => round((float) $expenseSnapshots->sum('effective_due_amount'), 4),
                 'total_paid' => round((float) $expenseSnapshots->sum('paid_this_month'), 4),
             ],
             'cutoffs' => $cutoffs,
@@ -198,8 +205,12 @@ class CutoffController extends Controller
                 && $payment->transaction_date->betweenIncluded($monthStart, $monthEnd))
             ->sum(fn (SpendIncome $payment): float => (float) $payment->amount), 4);
         $carryoverAmount = max(0, round($previousPayments - $this->calculateDueBeforeMonth($expense, $monthStart), 4));
+        $previousBalanceAmount = max(0, round($this->calculateDueBeforeMonth($expense, $monthStart) - $previousPayments, 4));
         $paidThisMonth = round($currentMonthPayments + $carryoverAmount, 4);
-        $effectiveDueAmount = round((float) $expense->total_amount + $currentMonthPenaltyAmount, 4);
+        $currentMonthDueAmount = $this->isExpenseDueInMonth($expense, $monthStart, $monthEnd)
+            ? round((float) $expense->total_amount, 4)
+            : 0.0;
+        $effectiveDueAmount = round($currentMonthDueAmount + $previousBalanceAmount + $currentMonthPenaltyAmount, 4);
         $remainingAmount = max(0, round($effectiveDueAmount - $paidThisMonth, 4));
 
         return [
@@ -211,9 +222,10 @@ class CutoffController extends Controller
             'date_start' => $expense->date_start,
             'date_end' => $expense->date_end,
             'payment_due' => $expense->payment_due,
-            'total_amount' => round((float) $expense->total_amount, 4),
+            'total_amount' => $currentMonthDueAmount,
             'paid_amount' => round((float) $expense->paid_amount, 4),
             'penalty_amount' => $currentMonthPenaltyAmount,
+            'previous_balance_amount' => $previousBalanceAmount,
             'effective_due_amount' => $effectiveDueAmount,
             'paid_this_month' => $paidThisMonth,
             'current_month_paid' => $currentMonthPayments,
@@ -230,6 +242,10 @@ class CutoffController extends Controller
 
         if ($previousMonth->lt($startMonth)) {
             return 0;
+        }
+
+        if ($this->isOneTimeLoan($expense)) {
+            return round((float) $expense->total_amount, 4);
         }
 
         $lastDueMonth = $previousMonth;
@@ -259,10 +275,58 @@ class CutoffController extends Controller
             return false;
         }
 
+        if ($this->isExpenseDueInMonth($expense, $monthStart, $monthEnd)) {
+            return true;
+        }
+
+        if ($expense->type !== 'loan') {
+            return false;
+        }
+
+        return $this->remainingBalanceBeforeMonth($expense, $monthStart) > 0;
+    }
+
+    private function isExpenseDueInMonth(Expenses $expense, Carbon $monthStart, Carbon $monthEnd): bool
+    {
+        $expenseStart = Carbon::parse((string) $expense->date_start);
+
+        if ($expenseStart->gt($monthEnd)) {
+            return false;
+        }
+
+        if ($this->isOneTimeLoan($expense)) {
+            return $expenseStart->startOfMonth()->equalTo($monthStart);
+        }
+
         if ($expense->date_end === null) {
             return true;
         }
 
         return Carbon::parse((string) $expense->date_end)->gte($monthStart);
+    }
+
+    private function isOneTimeLoan(Expenses $expense): bool
+    {
+        return $expense->type === 'loan' && $expense->payment_mode === 'one_time';
+    }
+
+    private function remainingBalanceBeforeMonth(Expenses $expense, Carbon $monthStart): float
+    {
+        $regularPayments = $expense->spendIncomes
+            ->filter(fn (SpendIncome $payment): bool => $payment->is_penalty !== true);
+
+        $trackedLifetimePaid = round((float) $regularPayments->sum(
+            fn (SpendIncome $payment): float => (float) $payment->amount
+        ), 4);
+
+        $legacyPaid = max(0, round((float) $expense->paid_amount - $trackedLifetimePaid, 4));
+        $previousPayments = round(
+            $legacyPaid + (float) $regularPayments
+                ->filter(fn (SpendIncome $payment): bool => $payment->transaction_date !== null && $payment->transaction_date->lt($monthStart))
+                ->sum(fn (SpendIncome $payment): float => (float) $payment->amount),
+            4,
+        );
+
+        return max(0, round($this->calculateDueBeforeMonth($expense, $monthStart) - $previousPayments, 4));
     }
 }

@@ -78,6 +78,12 @@ const carryoverAmount = computed(() => {
         : formatAmount(props.expense.carryover_amount);
 });
 
+const previousBalanceAmount = computed(() => {
+    return props.expense === null
+        ? '0.00'
+        : formatAmount(props.expense.previous_balance_amount);
+});
+
 const remainingAmount = computed(() => {
     return props.expense === null
         ? '0.00'
@@ -179,8 +185,9 @@ const amountLabel = computed(() => {
                                     month.
                                 </template>
                                 <template v-else>
-                                    Current due after this month's payments and
-                                    any carry-over from the previous month.
+                                    Current due after this month's payments,
+                                    prior unpaid balance, and any carry-over
+                                    credit from the previous month.
                                 </template>
                             </p>
                         </div>
@@ -239,6 +246,19 @@ const amountLabel = computed(() => {
                                 ₱{{
                                     formatAmount(props.expense.penalty_amount)
                                 }}
+                            </p>
+                        </div>
+
+                        <div class="rounded-xl border bg-muted/20 p-4">
+                            <p
+                                class="text-xs font-medium tracking-wide text-muted-foreground uppercase"
+                            >
+                                Previous Balance
+                            </p>
+                            <p
+                                class="mt-2 text-base font-semibold text-foreground"
+                            >
+                                ₱{{ previousBalanceAmount }}
                             </p>
                         </div>
 

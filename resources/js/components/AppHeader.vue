@@ -75,6 +75,12 @@ const mainNavItems: (NavItem & { permission: string })[] = [
         permission: 'dashboard.view',
     },
     {
+        title: 'Spend & Income',
+        href: '/spend-income',
+        icon: PhilippinePeso,
+        permission: 'spend_income.view',
+    },
+    {
         title: 'Cutoff',
         href: '/cutoff',
         icon: Columns2,

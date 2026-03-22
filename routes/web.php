@@ -4,6 +4,7 @@ use App\Http\Controllers\AccountsController;
 use App\Http\Controllers\CutoffController;
 use App\Http\Controllers\ExpensesController;
 use App\Http\Controllers\RolesController;
+use App\Http\Controllers\SpendIncomeController;
 use App\Http\Controllers\UserApprovalController;
 use App\Http\Middleware\EnsureUserIsApproved;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +33,8 @@ Route::middleware(['auth', 'verified', EnsureUserIsApproved::class])->group(func
         ->name('dashboard');
 
     Route::resource('expenses', ExpensesController::class);
+    Route::resource('spend-income', SpendIncomeController::class)
+        ->parameters(['spend-income' => 'spendIncome']);
     Route::resource('cutoff', CutoffController::class);
     Route::resource('accounts', AccountsController::class);
     Route::resource('approvals', UserApprovalController::class)

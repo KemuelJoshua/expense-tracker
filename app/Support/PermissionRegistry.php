@@ -25,6 +25,15 @@ class PermissionRegistry
                     'expenses.delete' => 'Delete expenses',
                 ],
             ],
+            'spend_income' => [
+                'label' => 'Spend & Income',
+                'permissions' => [
+                    'spend_income.view' => 'View spend and income',
+                    'spend_income.create' => 'Create spend and income',
+                    'spend_income.update' => 'Edit spend and income',
+                    'spend_income.delete' => 'Delete spend and income',
+                ],
+            ],
             'accounts' => [
                 'label' => 'Accounts',
                 'permissions' => [

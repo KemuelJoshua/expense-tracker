@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Casts\EncryptedDecimal;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Expenses extends Model
 {
@@ -40,5 +41,10 @@ class Expenses extends Model
             'total_amount' => EncryptedDecimal::class.':4',
             'paid_amount' => EncryptedDecimal::class.':4',
         ];
+    }
+
+    public function spendIncomes(): HasMany
+    {
+        return $this->hasMany(SpendIncome::class, 'expense_id');
     }
 }

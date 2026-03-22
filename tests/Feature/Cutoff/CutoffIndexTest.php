@@ -3,6 +3,7 @@
 namespace Tests\Feature\Cutoff;
 
 use App\Models\Expenses;
+use App\Models\SpendIncome;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -23,6 +24,7 @@ class CutoffIndexTest extends TestCase
             'created_by' => $user->id,
             'name' => 'Internet Bill',
             'date_start' => '2026-03-05',
+            'date_end' => null,
             'pay_in' => 'first',
             'paid_amount' => 400,
             'total_amount' => 1200,
@@ -32,6 +34,7 @@ class CutoffIndexTest extends TestCase
             'created_by' => $user->id,
             'name' => 'Office Rent',
             'date_start' => '2026-03-18',
+            'date_end' => null,
             'pay_in' => 'second',
             'paid_amount' => 1000,
             'total_amount' => 5000,
@@ -52,10 +55,14 @@ class CutoffIndexTest extends TestCase
                 ->where('filters.month', '2026-03')
                 ->where('summary.month', 'March 2026')
                 ->where('summary.count', 2)
+                ->where('summary.total_paid', 1400)
                 ->where('cutoffs.first.count', 1)
                 ->where('cutoffs.second.count', 1)
                 ->where('cutoffs.first.items.0.name', 'Internet Bill')
-                ->where('cutoffs.second.items.0.name', 'Office Rent'),
+                ->where('cutoffs.first.items.0.paid_this_month', 400)
+                ->where('cutoffs.first.items.0.remaining_amount', 800)
+                ->where('cutoffs.second.items.0.name', 'Office Rent')
+                ->where('cutoffs.second.items.0.paid_this_month', 1000),
             );
     }
 
@@ -70,6 +77,7 @@ class CutoffIndexTest extends TestCase
             'created_by' => $user->id,
             'name' => 'My Cutoff Expense',
             'date_start' => '2026-03-05',
+            'date_end' => null,
             'pay_in' => 'first',
         ]);
 
@@ -87,6 +95,60 @@ class CutoffIndexTest extends TestCase
                 ->where('summary.count', 1)
                 ->where('cutoffs.first.count', 1)
                 ->where('cutoffs.first.items.0.name', 'My Cutoff Expense'),
+            );
+    }
+
+    public function test_cutoff_index_applies_previous_month_excess_to_the_selected_month_paid_total(): void
+    {
+        $this->seed(RolesAndPermissionsSeeder::class);
+
+        $user = User::factory()->admin()->create();
+
+        $expense = Expenses::factory()->create([
+            'created_by' => $user->id,
+            'name' => 'Equipment Loan',
+            'date_start' => '2026-02-01',
+            'date_end' => null,
+            'pay_in' => 'first',
+            'total_amount' => 1000,
+            'paid_amount' => 1500,
+        ]);
+
+        SpendIncome::factory()->create([
+            'user_id' => $user->id,
+            'entry_type' => 'spend',
+            'transaction_date' => '2026-02-05',
+            'amount' => 1200,
+            'description' => 'Advance payment',
+            'expense_id' => $expense->id,
+            'account_id' => null,
+            'is_payroll' => false,
+            'payroll_month' => null,
+            'payroll_year' => null,
+        ]);
+
+        SpendIncome::factory()->create([
+            'user_id' => $user->id,
+            'entry_type' => 'spend',
+            'transaction_date' => '2026-03-08',
+            'amount' => 300,
+            'description' => 'March payment',
+            'expense_id' => $expense->id,
+            'account_id' => null,
+            'is_payroll' => false,
+            'payroll_month' => null,
+            'payroll_year' => null,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('cutoff.index', ['month' => '2026-03']))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('summary.total_paid', 500)
+                ->where('cutoffs.first.items.0.current_month_paid', 300)
+                ->where('cutoffs.first.items.0.carryover_amount', 200)
+                ->where('cutoffs.first.items.0.paid_this_month', 500)
+                ->where('cutoffs.first.items.0.remaining_amount', 500),
             );
     }
 }
